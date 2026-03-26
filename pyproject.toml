@@ -20,7 +20,7 @@ dev = [
 
 ]
 test = [
-
+    "pytest"
 ]
 
 [project.scripts]
