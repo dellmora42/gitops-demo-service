@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gitops-demo-service"
+version = "0.1.0"
+description = "PDugan "
+readme = "README.md"
+authors = [
+    {name = "Patrick Dugan", email = "pdugansaber@hotmail.com"}
+]
+dependencies = [
+    "fastapi",
+    "uvicorn"
+]
+
+[project.optional-dependencies]
+dev = [
+
+]
+test = [
+
+]
+
+[project.scripts]
+hello-cli = "hello_app.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
