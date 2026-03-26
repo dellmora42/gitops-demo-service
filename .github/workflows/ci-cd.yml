@@ -43,6 +43,7 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/}
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
             echo "is_release=true" >> $GITHUB_OUTPUT
+            echo "environment=production" >> $GITHUB_OUTPUT
           else
             echo "is_release=false" >> $GITHUB_OUTPUT
           fi
@@ -84,6 +85,7 @@ jobs:
           path: gitops-demo-config
 
       - name: Update GitOps Config Repo
+        if: steps.meta.outputs.environment != 'none'
         run: |
           cd gitops-demo-config
           
