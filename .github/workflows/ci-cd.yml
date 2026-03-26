@@ -70,7 +70,7 @@ jobs:
           context: ./gitops-demo-service
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/gitops-demo:${{ steps.meta.outputs.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/gitops-demo-service:${{ steps.meta.outputs.sha }}
             ${{ steps.meta.outputs.is_release == 'true' && format('{0}//gitops-demo-service:{1}', secrets.DOCKER_USERNAME, steps.meta.outputs.version) || '' }}
             ${{ github.ref == 'refs/heads/main' && format('{0}//gitops-demo-service:latest', secrets.DOCKER_USERNAME) || '' }}
             ${{ github.ref == 'refs/heads/develop' && format('{0}//gitops-demo-service:develop', secrets.DOCKER_USERNAME) || '' }}
