@@ -79,7 +79,9 @@ jobs:
         if: steps.meta.outputs.environment != 'none'
         uses: actions/checkout@v4
         with:
-          repository: '${{ github.repository }}/gitops-demo-config'
+          repository: '${{ github.repository_owner }}/gitops-demo-config'
+          token: '${{ secrets.K8S_GITHUB_PAT }}'
+          path: gitops-demo-config
 
       - name: Update GitOps Config Repo
         run: |
