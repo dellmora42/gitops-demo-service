@@ -11,3 +11,9 @@ This is based off the demo presented on pluralsight at [Microservices: DevOps fr
 - `pip install build`
 -  `pip install .`
 - run `hello-cli`
+
+# CI/CD Setup
+
+Configure secrets on github:
+
+- add DOCKER_TOKEN, DOCKER_USERNAME, and K8S_REPO_PAT
