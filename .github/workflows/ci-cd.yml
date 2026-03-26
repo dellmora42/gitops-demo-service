@@ -67,13 +67,13 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./product-service
+          context: ./gitops-demo-service
           push: true
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/product-service:${{ steps.meta.outputs.sha }}
-            ${{ steps.meta.outputs.is_release == 'true' && format('{0}/product-service:{1}', secrets.DOCKER_USERNAME, steps.meta.outputs.version) || '' }}
-            ${{ github.ref == 'refs/heads/main' && format('{0}/product-service:latest', secrets.DOCKER_USERNAME) || '' }}
-            ${{ github.ref == 'refs/heads/develop' && format('{0}/product-service:develop', secrets.DOCKER_USERNAME) || '' }}
+            ${{ secrets.DOCKER_USERNAME }}/gitops-demo:${{ steps.meta.outputs.sha }}
+            ${{ steps.meta.outputs.is_release == 'true' && format('{0}//gitops-demo-service:{1}', secrets.DOCKER_USERNAME, steps.meta.outputs.version) || '' }}
+            ${{ github.ref == 'refs/heads/main' && format('{0}//gitops-demo-service:latest', secrets.DOCKER_USERNAME) || '' }}
+            ${{ github.ref == 'refs/heads/develop' && format('{0}//gitops-demo-service:develop', secrets.DOCKER_USERNAME) || '' }}
 
       - name: Update GitOps configuration
         if: steps.meta.outputs.environment != 'none'
@@ -87,8 +87,8 @@ jobs:
           ENV_PATH="environments/${{ steps.meta.outputs.environment }}"
           
           # Create/update version file for GitOps
-          echo "product-service:${{ steps.meta.outputs.sha }}" > ${ENV_PATH}/product-service.version
+          echo "/gitops-demo-service:${{ steps.meta.outputs.sha }}" > ${ENV_PATH}//gitops-demo-service.version
           
           git add .
-          git commit -m "Update product-service to ${{ steps.meta.outputs.sha }} in ${{ steps.meta.outputs.environment }}"
+          git commit -m "Update /gitops-demo-service to ${{ steps.meta.outputs.sha }} in ${{ steps.meta.outputs.environment }}"
           git push
