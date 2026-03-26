@@ -75,20 +75,27 @@ jobs:
             ${{ github.ref == 'refs/heads/main' && format('{0}/gitops-demo-service:latest', secrets.DOCKER_USERNAME) || '' }}
             ${{ github.ref == 'refs/heads/develop' && format('{0}/gitops-demo-service:develop', secrets.DOCKER_USERNAME) || '' }}
 
-      - name: Update GitOps configuration
+      - name: Checkout GitOps Config Repo
         if: steps.meta.outputs.environment != 'none'
+        uses: actions/checkout@v4
+        with:
+          repository: '${{ github.repository }}/gitops-demo-config'
+
+      - name: Update GitOps Config Repo
         run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          
-          git clone https://${{ secrets.K8S_GITHUB_PAT }}@github.com/${{ github.repository_owner }}/gitops-demo-config.git
           cd gitops-demo-config
           
+          # setup bot identity
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+                    
           ENV_PATH="environments/${{ steps.meta.outputs.environment }}"
+          
+          mkdir -p "$ENV_PATH"
           
           # Create/update version file for GitOps
           echo "/gitops-demo-service:${{ steps.meta.outputs.sha }}" > ${ENV_PATH}//gitops-demo-service.version
           
           git add .
-          git commit -m "Update /gitops-demo-service to ${{ steps.meta.outputs.sha }} in ${{ steps.meta.outputs.environment }}"
+          git commit -m "Update gitops-demo-service to ${{ steps.meta.outputs.sha }} in ${{ steps.meta.outputs.environment }}"
           git push
