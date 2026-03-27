@@ -17,3 +17,7 @@ This is based off the demo presented on pluralsight at [Microservices: DevOps fr
 Configure secrets on github:
 
 - add DOCKER_TOKEN, DOCKER_USERNAME, and K8S_REPO_PAT
+
+
+# Notes
+
