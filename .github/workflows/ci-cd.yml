@@ -94,12 +94,26 @@ jobs:
           git config --global user.name "github-actions[bot]"
                     
           ENV_PATH="environments/${{ steps.meta.outputs.environment }}"
-          
           mkdir -p "$ENV_PATH"
           
-          # Create/update version file for GitOps
-          echo "/gitops-demo-service:${{ steps.meta.outputs.sha }}" > ${ENV_PATH}//gitops-demo-service.version
+          # 1. Determine which version string to use
+          if [ "${{ steps.meta.outputs.is_release }}" = "true" ]; then
+            # If it's a tag (vx.x.x), use the tag name
+            TAG_TO_USE="${{ steps.meta.outputs.version }}"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            # If it's the main branch, use 'latest'
+            TAG_TO_USE="latest"
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            # If it's the develop branch, use 'develop'
+            TAG_TO_USE="develop"
+          else
+            # Fallback to the specific commit SHA
+            TAG_TO_USE="${{ steps.meta.outputs.sha }}"
+          fi
+          
+          # 2. Create/update version file for GitOps using specified tag from above
+          echo "/gitops-demo-service:${TAG_TO_USE}}" > ${ENV_PATH}//gitops-demo-service.version
           
           git add .
-          git commit -m "Update gitops-demo-service to ${{ steps.meta.outputs.sha }} in ${{ steps.meta.outputs.environment }}"
+          git commit -m "Update gitops-demo-service to ${TAG_TO_USE}} in ${{ steps.meta.outputs.environment }}"
           git push
