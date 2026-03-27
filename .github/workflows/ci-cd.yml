@@ -44,8 +44,15 @@ jobs:
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
             echo "is_release=true" >> $GITHUB_OUTPUT
             echo "environment=production" >> $GITHUB_OUTPUT
+          elif [[ $GITHUB_REF == refs/heads/main ]]; then
+            echo "is_release=false" >> $GITHUB_OUTPUT
+            echo "environment=production" >> $GITHUB_OUTPUT
+          elif [[ $GITHUB_REF == refs/heads/develop ]]; then
+            echo "is_release=false" >> $GITHUB_OUTPUT
+            echo "environment=staging" >> $GITHUB_OUTPUT
           else
             echo "is_release=false" >> $GITHUB_OUTPUT
+            echo "environment=none" >> $GITHUB_OUTPUT
           fi
           
           if [[ $GITHUB_REF == refs/heads/main ]]; then
@@ -112,7 +119,7 @@ jobs:
           fi
           
           # 2. Create/update version file for GitOps using specified tag from above
-          echo "/gitops-demo-service:${TAG_TO_USE}}" > ${ENV_PATH}//gitops-demo-service.version
+          echo "/gitops-demo-service:${TAG_TO_USE}" > ${ENV_PATH}//gitops-demo-service.version
           
           git add .
           git commit -m "Update gitops-demo-service to ${TAG_TO_USE}} in ${{ steps.meta.outputs.environment }}"
