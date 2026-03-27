@@ -9,31 +9,31 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
-          fetch-depth: 0
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.x'
-
-      - name: Install dependencies
+          python-version: "3.x"
+      - name: Install and Test
         run: |
-          python -m pip install --upgrade pip
           pip install build
           pip install .[test]
-
-      - name: Run tests
-        run: |
           pytest
 
-      - name: Generate build metadata
+  build-image:
+    needs: test
+    runs-on: ubuntu-latest
+    # Map step outputs to job outputs so the next job can see them
+    outputs:
+      sha: ${{ steps.meta.outputs.sha }}
+      environment: ${{ steps.meta.outputs.environment }}
+      version: ${{ steps.meta.outputs.version }}
+      is_release: ${{ steps.meta.outputs.is_release }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Generate Metadata
         id: meta
         run: |
           SHA=${GITHUB_SHA::8}
@@ -54,59 +54,52 @@ jobs:
             echo "is_release=false" >> $GITHUB_OUTPUT
             echo "environment=none" >> $GITHUB_OUTPUT
           fi
-          
-          if [[ $GITHUB_REF == refs/heads/main ]]; then
-            echo "environment=production" >> $GITHUB_OUTPUT
-          elif [[ $GITHUB_REF == refs/heads/develop ]]; then
-            echo "environment=staging" >> $GITHUB_OUTPUT
-          else
-            echo "environment=none" >> $GITHUB_OUTPUT
-          fi
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Login to Docker Hub
+      - name: Login to Docker
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+          password: ${{ secrets.DOCKER_TOKEN}}
 
-      - name: Build and push Docker image
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
+          # create several tags, always push the commit SHA and push others conditionally (develop, latest, version)
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/gitops-demo-service:${{ steps.meta.outputs.sha }}
             ${{ steps.meta.outputs.is_release == 'true' && format('{0}/gitops-demo-service:{1}', secrets.DOCKER_USERNAME, steps.meta.outputs.version) || '' }}
             ${{ github.ref == 'refs/heads/main' && format('{0}/gitops-demo-service:latest', secrets.DOCKER_USERNAME) || '' }}
             ${{ github.ref == 'refs/heads/develop' && format('{0}/gitops-demo-service:develop', secrets.DOCKER_USERNAME) || '' }}
 
-      - name: Checkout GitOps Config Repo
-        if: steps.meta.outputs.environment != 'none'
-        uses: actions/checkout@v4
+  update-config-repo:
+    needs: build-image
+    if: needs.build-image.outputs.environment != 'none'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Config Repo
+        uses: actions/checkout@v5
         with:
-          repository: '${{ github.repository_owner }}/gitops-demo-config'
-          token: '${{ secrets.K8S_GITHUB_PAT }}'
+          repository: '${{ github.repository }}/gitops-demo-config'
+          token: '${{ sercrets.K8S_GITHUB_PAT }}'
           path: gitops-demo-config
 
-      - name: Update GitOps Config Repo
-        if: steps.meta.outputs.environment != 'none'
+      - name: Update Version File
         run: |
           cd gitops-demo-config
           
           # setup bot identity
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-                    
-          ENV_PATH="environments/${{ steps.meta.outputs.environment }}"
+          
+          ENV_PATH="environments/${{ needs.build-image.outputs.environment }}"
           mkdir -p "$ENV_PATH"
           
           # 1. Determine which version string to use
-          if [ "${{ steps.meta.outputs.is_release }}" = "true" ]; then
+          if [ "${{ needs.build-image.outputs.is_release }}" = "true" ]; then
             # If it's a tag (vx.x.x), use the tag name
-            TAG_TO_USE="${{ steps.meta.outputs.version }}"
+            TAG_TO_USE="${{ needs.build-image.outputs.version }}"
           elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
             # If it's the main branch, use 'latest'
             TAG_TO_USE="latest"
@@ -115,12 +108,13 @@ jobs:
             TAG_TO_USE="develop"
           else
             # Fallback to the specific commit SHA
-            TAG_TO_USE="${{ steps.meta.outputs.sha }}"
+            TAG_TO_USE="${{ needs.build-image.outputs.sha }}"
           fi
           
           # 2. Create/update version file for GitOps using specified tag from above
           echo "/gitops-demo-service:${TAG_TO_USE}" > ${ENV_PATH}//gitops-demo-service.version
           
           git add .
-          git commit -m "Update gitops-demo-service to ${TAG_TO_USE}} in ${{ steps.meta.outputs.environment }}"
+          git commit -m "Update gitops-demo-service to ${TAG_TO_USE}} in ${{ needs.build-image.outputs.environment }}"
           git push
+      
